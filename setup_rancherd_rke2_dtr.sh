@@ -392,7 +392,8 @@ function r2dtrLoad(){
 
 
 function r2dtrSetPassword(){
-    export RKE2_REGISTRY_AUTH_USER=${1} RKE2_REGISTRY_AUTH_PASS=${2}
+    export RKE2_REGISTRY_AUTH_USER=${1} 
+    export RKE2_REGISTRY_AUTH_PASS=${2}
 }
 
 #\******************************************************************/#
@@ -406,6 +407,8 @@ export RKE2_REGISTRY_AUTH_USER=${3}  #--- 'qgenqzva'
 export RKE2_REGISTRY_AUTH_PASS=${4}  #--- 'yYzkS1YzeTSpw1T'
 
 cat<<EOF
+AZ_CLUSTER_GROUP_NAME=${AZ_CLUSTER_GROUP_NAME}
+DTR_TYPE=${DTR_TYPE}
 RKE2_INSTALL_RANCHERD_VERSION=${RKE2_INSTALL_RANCHERD_VERSION}
 RKE2_REGISTRY_AUTH_USER=${RKE2_REGISTRY_AUTH_USER}
 RKE2_REGISTRY_AUTH_PASS=${RKE2_REGISTRY_AUTH_PASS}
