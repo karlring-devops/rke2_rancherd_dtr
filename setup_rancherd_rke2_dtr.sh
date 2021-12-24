@@ -7,7 +7,7 @@
 #->
 # /***********************************************************************************************
 
-alias r2dtr=". `pwd`/setup_rancherd_rke2_dtr.sh ${1} ${2}"
+# alias r2dtr=". `pwd`/setup_rancherd_rke2_dtr.sh ${1} ${2}"
 
 #\******************************************************************/#
 # | general functions
@@ -237,12 +237,12 @@ ssh -q -T -i ${vmIfile} ${vmAuth} <<EOF
 mirrors:
   docker.io:
     endpoint:
-      - "https://${REGISTRY_AUTH_URL}:443"
+      - "https://${RKE2_REGISTRY_AUTH_URL}:443"
 configs:
-  "${REGISTRY_AUTH_URL}:443":
+  "${RKE2_REGISTRY_AUTH_URL}:443":
     auth:
-      username: ${REGISTRY_AUTH_USER}
-      password: ${REGISTRY_AUTH_PASS}
+      username: ${RKE2_REGISTRY_AUTH_USER}
+      password: ${RKE2_REGISTRY_AUTH_PASS}
     # tls:
     #   cert_file: # path to the cert file used in the registry
     #   key_file:  # path to the key file used in the registry
@@ -372,6 +372,28 @@ EOF
     fi
 }
 
+function r2dtrenv(){
+    dtrType="${1}"
+    rke2Version="${2}"
+    . `pwd`/setup_rancherd_rke2_dtr.sh ${dtrType} ${rke2Version}
+}
+
+
+function r2dtrLoad(){
+    dtrType="${1}"
+    rke2Version="${2}"
+    cd ../
+    rm -rf rke2_rancherd_dtr/
+    pwd
+    git clone https://github.com/karlring-devops/rke2_rancherd_dtr.git
+    cd rke2_rancherd_dtr/
+    . ./setup_rancherd_rke2_dtr.sh ${dtrType} ${rke2Version}
+}
+
+
+function r2dtrSetPassword(){
+    export RKE2_REGISTRY_AUTH_USER=${1} RKE2_REGISTRY_AUTH_PASS=${2}
+}
 
 #\******************************************************************/#
 # | MAIN: rancher_cluster_setup
@@ -554,8 +576,8 @@ cat <<EOF| sudo tee ${RKE2_AGENT_DIR}/etc/containerd/config.toml
   endpoint = ["https://${RKE2_REGISTRY_AUTH_URL}:443"]
 
 [plugins.cri.registry.configs."${RKE2_REGISTRY_AUTH_URL}:443".auth]
-  username = "${REGISTRY_AUTH_USER}"
-  password = "${REGISTRY_AUTH_PASS}"
+  username = "${RKE2_REGISTRY_AUTH_USER}"
+  password = "${RKE2_REGISTRY_AUTH_PASS}"
 EOF
 }
 
@@ -733,11 +755,6 @@ function docker_test_repo(){
     # Releases : ---> https://github.com/rancher/rancher/releases?q=2.5.11&expanded=true
 
   
-
-
-
-
-
 
 
 
