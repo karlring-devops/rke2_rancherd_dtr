@@ -420,7 +420,7 @@ EOF
 
 az-env load_script
 
-#rke2-env
+rke2-env
 
 function rancher_server_install(){
     	rancher_config_remote_env ${1} server
