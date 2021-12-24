@@ -92,7 +92,7 @@ function rke2-uninstall(){
 EOF
 }
 
-flist(){
+function flist(){
     __MSG_BANNER__ "Functions: `pwd`/setup_rancherd_rke2_dtr.sh"
      grep '(){' `pwd`/setup_rancherd_rke2_dtr.sh|egrep 'MSG|az|rke2|ssh|rancher'|sed -e 's/(){//g'| grep function| grep -v grep
  }
@@ -262,7 +262,7 @@ ssh -q -T -i ${vmIfile} ${vmAuth} << EOF
 #--- PREPARE INSTALL RKE2 SCRIPT(S) ---------#
 #--------------------------------------------#
 cat << EOFRKEINSTALL | tee /home/azureuser/uga/rke2_install.sh
-    sudo curl -sfL https://get.rancher.io | INSTALL_RANCHERD_VERSION=${version} sudo sh -
+    sudo curl -sfL https://get.rancher.io | RKE2_INSTALL_RANCHERD_VERSION=${version} sudo sh -
     rancherd --help
 EOFRKEINSTALL
 
@@ -401,10 +401,15 @@ function r2dtrSetPassword(){
 
 AZ_CLUSTER_GROUP_NAME=clsrke2
 export DTR_TYPE=${1}                 #--- private|public
-export INSTALL_RANCHERD_VERSION=${2} #--- 2.6.3 | v2.5.4-rc6
+export RKE2_INSTALL_RANCHERD_VERSION=${2} #--- 2.6.3 | v2.5.4-rc6
 export RKE2_REGISTRY_AUTH_USER=${3}  #--- 'qgenqzva'
 export RKE2_REGISTRY_AUTH_PASS=${4}  #--- 'yYzkS1YzeTSpw1T'
 
+cat<<EOF
+RKE2_INSTALL_RANCHERD_VERSION=${RKE2_INSTALL_RANCHERD_VERSION}
+RKE2_REGISTRY_AUTH_USER=${RKE2_REGISTRY_AUTH_USER}
+RKE2_REGISTRY_AUTH_PASS=${RKE2_REGISTRY_AUTH_PASS}
+EOF
 
 az-env load_script
 rke2-env
@@ -417,7 +422,7 @@ function rancher_server_install(){
     	#---- private dtr -----------#
 		  [ ${DTR_TYPE} == "private" ] && rancher_config_remote_registry_yaml
 		  #----------------------------#
-    	rancher_config_remote_rke2_scripts ${INSTALL_RANCHERD_VERSION}
+    	rancher_config_remote_rke2_scripts ${RKE2_INSTALL_RANCHERD_VERSION}
     	rancher_config_install_rke2 ${DTR_TYPE}
       rancher_config_udpate_rancherd_service ${DTR_TYPE}
       rancher_config_start_rancherd_service
@@ -433,7 +438,7 @@ function rancher_server_client(){
     	#---- private dtr -----------#
 		  [ ${DTR_TYPE} == "private" ] && rancher_config_remote_registry_yaml
 		  #----------------------------#
-    	rancher_config_remote_rke2_scripts ${INSTALL_RANCHERD_VERSION}
+    	rancher_config_remote_rke2_scripts ${RKE2_INSTALL_RANCHERD_VERSION}
     	rancher_config_install_rke2 ${DTR_TYPE}
       rancher_config_udpate_rancherd_service ${DTR_TYPE}
       rancher_config_start_rancherd_service
@@ -474,7 +479,7 @@ function rke_dtr_version_change(){
     dtrenv
     rancher-env
     rancher_purge_repository
-    rancher_get_source_files ${INSTALL_RANCHERD_VERSION}
+    rancher_get_source_files ${RKE2_INSTALL_RANCHERD_VERSION}
     rancher_get_images
     rancher_pull_images
     #docker_login_repo
@@ -482,11 +487,6 @@ function rke_dtr_version_change(){
 }
 
 function rke_rebuild_nodes(){             #--- build rke azure cluster
-      
-      # INSTALL_RANCHERD_VERSION=2.5.11 #--2.6.3
-      # AZ_CLUSTER_GROUP_NAME=clsrke2
-      # DTR_TYPE=private   #--- private|public
-
       __MSG_INFO__ start_date "`date`"
       az-env rancher_cluster_setup
       rke2-env
@@ -509,10 +509,6 @@ function rke_node_journal(){
 }
 
 function rke_node_rebuild(){
-      # INSTALL_RANCHERD_VERSION=2.5.11 #-- 2.6.3
-      # AZ_CLUSTER_GROUP_NAME=clsrke2
-      #DTR_TYPE=public   #--- private|public
-
       az-env rancher_cluster_setup
       rke2-env
       az_delete_vm ${1} && az_create_vm ${1}
@@ -524,10 +520,6 @@ function rke_node_rebuild(){
 }
 
 function rke_node_rebuild_debug(){
-      # INSTALL_RANCHERD_VERSION=2.5.11
-      # AZ_CLUSTER_GROUP_NAME=clsrke2
-      #DTR_TYPE=public   #--- private|public
-
       az-env rancher_cluster_setup
       rke2-env
       az_delete_vm ${1} && az_create_vm ${1}
@@ -542,7 +534,7 @@ function rke_node_rebuild_debug(){
       #---- private dtr -----------#
       [ ${DTR_TYPE} == "private" ] && rancher_config_remote_registry_yaml
       #----------------------------#
-      rancher_config_remote_rke2_scripts ${INSTALL_RANCHERD_VERSION}
+      rancher_config_remote_rke2_scripts ${RKE2_INSTALL_RANCHERD_VERSION}
       rancher_config_install_rke2 ${DTR_TYPE}
       rancher_config_udpate_rancherd_service ${DTR_TYPE}
       #rancher_config_start_rancherd_service
