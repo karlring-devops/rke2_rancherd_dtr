@@ -66,7 +66,7 @@ function rke2-env(){
     RKE2_ROOT_DIR=/var/lib/rancher/rke2
     RKE2_AGENT_DIR=${RKE2_ROOT_DIR}/agent
     RKE2_IMAGE_DIR=${RKE2_AGENT_DIR}/images
-    set | egrep 'CLS_|RKE2_|REGISTRY_|DTR_|INSTALL_R' | grep '=' | egrep -v '\(\)|;|\$' | grep -v curl
+    set | egrep 'CLS_|RKE2_|DTR_' | grep '=' | egrep -v '\(\)|;|\$' | grep -v curl
 }
 
 
