@@ -415,7 +415,8 @@ RKE2_REGISTRY_AUTH_PASS=${RKE2_REGISTRY_AUTH_PASS}
 EOF
 
 az-env load_script
-rke2-env
+
+#rke2-env
 
 function rancher_server_install(){
     	rancher_config_remote_env ${1} server
@@ -722,14 +723,14 @@ EOF
 
 function docker_login_repo(){
             MY_VM_HOST=vm-rg-dtrprivateprod-1-106
-            MY_REGISTRY_DOMIN_COM=${MY_VM_HOST}.westus2.cloudapp.azure.com  
-            docker login -udtradmin -plLmxF6LmrGFcj6G ${MY_REGISTRY_DOMIN_COM}:443
+            #MY_REGISTRY_DOMIN_COM=${MY_VM_HOST}.westus2.cloudapp.azure.com  
+            docker login -u${RKE2_REGISTRY_AUTH_USER} -p${RKE2_REGISTRY_AUTH_PASS} ${RKE2_REGISTRY_AUTH_URL}:443
 }
 
 function docker_test_repo(){
             MY_VM_HOST=vm-rg-dtrprivateprod-1-106
-            MY_REGISTRY_DOMIN_COM=${MY_VM_HOST}.westus2.cloudapp.azure.com  
-            DOCKER_HOST="${MY_REGISTRY_DOMIN_COM}:443"
+            #MY_REGISTRY_DOMIN_COM=${MY_VM_HOST}.westus2.cloudapp.azure.com  
+            DOCKER_HOST="${RKE2_REGISTRY_AUTH_URL}:443"
             sudo docker pull alpine
             sudo docker tag alpine ${DOCKER_HOST}/my-alpine
             sudo docker push ${DOCKER_HOST}/my-alpine
