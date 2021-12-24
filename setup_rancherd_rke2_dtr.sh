@@ -62,11 +62,13 @@ function rke2-env(){
     RKE2_SERVICE_AGENT=/usr/local/lib/systemd/system/rancherd-agent.service
     RKE2_SERVICE_SERVER=/usr/local/lib/systemd/system/rancherd-server.service
     RKE2_TMP_TARBALL=/tmp/rancherd-amd64.tar.gz
-    REGISTRY_AUTH_URL='vm-rg-dtrprivateprod-1-106.westus2.cloudapp.azure.com'
-    REGISTRY_AUTH_USER='dtradmin'
-    REGISTRY_AUTH_PASS='lLmxF6LmrGFcj6G'
+    RKE2_REGISTRY_AUTH_URL='vm-rg-dtrprivateprod-1-106.westus2.cloudapp.azure.com'
+    RKE2_ROOT_DIR=/var/lib/rancher/rke2
+    RKE2_AGENT_DIR=${RKE2_ROOT_DIR}/agent
+    RKE2_IMAGE_DIR=${RKE2_AGENT_DIR}/images
     set | egrep 'CLS_|RKE2_|REGISTRY_|DTR_|INSTALL_R' | grep '=' | egrep -v '\(\)|;|\$' | grep -v curl
 }
+
 
 
 function rke2-uninstall(){
@@ -377,7 +379,10 @@ EOF
 
 AZ_CLUSTER_GROUP_NAME=clsrke2
 export DTR_TYPE=${1}                 #--- private|public
-export INSTALL_RANCHERD_VERSION=${2} #-- 2.6.3 | v2.5.4-rc6
+export INSTALL_RANCHERD_VERSION=${2} #--- 2.6.3 | v2.5.4-rc6
+export RKE2_REGISTRY_AUTH_USER=${3}  #--- 'qgenqzva'
+export RKE2_REGISTRY_AUTH_PASS=${4}  #--- 'yYzkS1YzeTSpw1T'
+
 
 az-env load_script
 rke2-env
@@ -524,6 +529,38 @@ function rke_node_rebuild_debug(){
 
 #/**************************************************************************************#/
 
+
+rke2_update_containerd_config_toml(){
+cat <<EOF| sudo tee ${RKE2_AGENT_DIR}/etc/containerd/config.toml
+[plugins.opt]
+  path = "/var/lib/rancher/rke2/agent/containerd"
+
+[plugins.cri]
+  stream_server_address = "127.0.0.1"
+  stream_server_port = "10010"
+  enable_selinux = false
+  sandbox_image = "${RKE2_REGISTRY_AUTH_URL}:443/rancher/pause:3.2"
+
+[plugins.cri.containerd]
+  disable_snapshot_annotations = true
+  snapshotter = "overlayfs"
+
+[plugins.cri.containerd.runtimes.runc]
+  runtime_type = "io.containerd.runc.v2"
+
+[plugins.cri.registry.mirrors]
+
+[plugins.cri.registry.mirrors."docker.io"]
+  endpoint = ["https://${RKE2_REGISTRY_AUTH_URL}:443"]
+
+[plugins.cri.registry.configs."${RKE2_REGISTRY_AUTH_URL}:443".auth]
+  username = "${REGISTRY_AUTH_USER}"
+  password = "${REGISTRY_AUTH_PASS}"
+EOF
+}
+
+
+
 kconf-get-apisrv(){
   KUBE_API_SERVER_CONFIG=/var/lib/rancher/rke2/server/cred/api-server.kubeconfig
   __MSG_BANNER__ cat ${KUBE_API_SERVER_CONFIG}
@@ -609,26 +646,6 @@ function sshnode(){
   ssh  -i ${vmIfile} ${vmAuth} "${2}"
 }
 
-function rke2-env(){
-    CLS_MASTER_TOKEN=`pwd`/rke_upstream_cls_token.tkn
-    CLS_MASTER_PASSW=`pwd`/rke_upstream_cls_admin.auth
-
-    RKE2_REGISTRY_YAML=/etc/rancher/rke2/registries.yaml
-    RKE2_CLUSTER_YAML=/etc/rancher/rke2/config.yaml
-    RKE2_CONFIG_TEMP=/home/azureuser/uga/rke2_config.yaml
-    RKE2_TAR_FILE=`pwd`/tar/rancherd-amd64.tar.gz
-    RKE2_NODE_TOKEN=/var/lib/rancher/rke2/server/node-token
-    RKE2_SERVICE_AGENT=/usr/local/lib/systemd/system/rancherd-agent.service
-    RKE2_SERVICE_SERVER=/usr/local/lib/systemd/system/rancherd-server.service
-    RKE2_TMP_TARBALL=/tmp/rancherd-amd64.tar.gz
-    RKE2_REGISTRY_AUTH_URL='vm-rg-dtrprivateprod-1-106.westus2.cloudapp.azure.com'
-    RKE2_REGISTRY_AUTH_USER='dtradmin'
-    RKE2_REGISTRY_AUTH_PASS='lLmxF6LmrGFcj6G'
-    RKE2_ROOT_DIR=/var/lib/rancher/rke2
-    RKE2_AGENT_DIR=${RKE2_ROOT_DIR}/agent
-    RKE2_IMAGE_DIR=${RKE2_AGENT_DIR}/images
-    set | egrep 'CLS_|RKE2_|REGISTRY_|DTR_|INSTALL_R' | grep '=' | egrep -v '\(\)|;|\$' | grep -v curl
-}
 
 function rk2_update_images(){
     for x in `sudo ls -1 ${RKE2_IMAGE_DIR}`
@@ -715,8 +732,7 @@ function docker_test_repo(){
 
     # Releases : ---> https://github.com/rancher/rancher/releases?q=2.5.11&expanded=true
 
-
-
+  
 
 
 
