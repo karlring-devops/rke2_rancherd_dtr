@@ -375,19 +375,23 @@ EOF
 function r2dtrenv(){
     dtrType="${1}"
     rke2Version="${2}"
-    . `pwd`/setup_rancherd_rke2_dtr.sh ${dtrType} ${rke2Version}
+    rke2DTRUser="${3}"
+    rke2DTRPass="${4}"
+    . `pwd`/setup_rancherd_rke2_dtr.sh ${dtrType} ${rke2Version} ${rke2DTRUser} ${rke2DTRPass}
 }
 
 
 function r2dtrLoad(){
     dtrType="${1}"
     rke2Version="${2}"
+    rke2DTRUser="${3}"
+    rke2DTRPass="${4}"
     cd ../
     rm -rf rke2_rancherd_dtr/
     pwd
     git clone https://github.com/karlring-devops/rke2_rancherd_dtr.git
     cd rke2_rancherd_dtr/
-    . ./setup_rancherd_rke2_dtr.sh ${dtrType} ${rke2Version}
+    . `pwd`/setup_rancherd_rke2_dtr.sh ${dtrType} ${rke2Version} ${rke2DTRUser} ${rke2DTRPass}
 }
 
 
@@ -405,8 +409,6 @@ export DTR_TYPE=${1}                 #--- private|public
 export RKE2_INSTALL_RANCHERD_VERSION=${2} #--- 2.6.3 | v2.5.4-rc6
 export RKE2_REGISTRY_AUTH_USER=${3}  #--- 'qgenqzva'
 export RKE2_REGISTRY_AUTH_PASS=${4}  #--- 'yYzkS1YzeTSpw1T'
-
-r2dtrSetPassword ${RKE2_REGISTRY_AUTH_USER} ${RKE2_REGISTRY_AUTH_PASS}
 
 cat<<EOF
 AZ_CLUSTER_GROUP_NAME=${AZ_CLUSTER_GROUP_NAME}
