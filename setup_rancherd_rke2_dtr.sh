@@ -57,11 +57,11 @@ function rke2-env(){
     RKE2_REGISTRY_YAML=/etc/rancher/rke2/registries.yaml
     RKE2_CLUSTER_YAML=/etc/rancher/rke2/config.yaml
     RKE2_CONFIG_TEMP=/home/azureuser/uga/rke2_config.yaml
-    TAR_FILE=`pwd`/../tar/rancherd-amd64.tar.gz
+    RKE2_TAR_FILE=`pwd`/tar/rancherd-amd64.tar.gz
     RKE2_NODE_TOKEN=/var/lib/rancher/rke2/server/node-token
     RKE2_SERVICE_AGENT=/usr/local/lib/systemd/system/rancherd-agent.service
     RKE2_SERVICE_SERVER=/usr/local/lib/systemd/system/rancherd-server.service
-    TMP_TARBALL=/tmp/rancherd-amd64.tar.gz
+    RKE2_TMP_TARBALL=/tmp/rancherd-amd64.tar.gz
     REGISTRY_AUTH_URL='vm-rg-dtrprivateprod-1-106.westus2.cloudapp.azure.com'
     REGISTRY_AUTH_USER='dtradmin'
     REGISTRY_AUTH_PASS='lLmxF6LmrGFcj6G'
@@ -69,7 +69,7 @@ function rke2-env(){
 }
 
 
-function rke2_uninstall(){
+function rke2-uninstall(){
   az-env rke2_uninstall
   rke2-env
   vmName=`cat /etc/hosts|grep "${AZ_CLUSTER_GROUP_NAME}-1-${1}"|awk '{print $2}'`
@@ -89,6 +89,11 @@ function rke2_uninstall(){
       sudo systemctl status  rancherd-server.service --no-pager
 EOF
 }
+
+flist(){
+    __MSG_BANNER__ "Functions: `pwd`/setup_rancherd_rke2_dtr.sh"
+     grep '(){' `pwd`/setup_rancherd_rke2_dtr.sh|egrep 'MSG|az|rke2|ssh|rancher'|sed -e 's/(){//g'| grep function| grep -v grep
+ }
 
 #\******************************************************************/#
 # | AZURE functions
@@ -324,12 +329,7 @@ ExecStartPre=-/sbin/modprobe overlay
 ExecStart=/usr/local/bin/rancherd server --private-registry /etc/rancher/rke2/registries.yaml
 EOFRANCHERDSERVICE
 EOF
-      # #--- update dtr information -----#
-      #     oldText='ExecStart=/usr/local/bin/rancherd server'
-      # 	newText='ExecStart=/usr/local/bin/rancherd server --private-registry /etc/rancher/rke2/registries.yaml'
-      # 	sudo sed -i -e "s|${oldText}|${oldText}|g" ${RKE2_SERVICE_SERVER}
-      # #--------------------------------#
-      # EOF
+
 fi
 }
 
@@ -422,9 +422,6 @@ function rancher_cluster_setup(){
       rancher_config_get_server_login 1
 }
 
-# export KUBECONFIG=/etc/rancher/rke2/rke2.yaml PATH=$PATH:/var/lib/rancher/rke2/bin
-# kubectl get daemonset rancher -n cattle-system
-# kubectl get pod -n cattle-system
 
 function rancher_config_kube_non_root(){
     export KUBECONFIG=/etc/rancher/rke2/rke2.yaml PATH=$PATH:/var/lib/rancher/rke2/bin
@@ -439,17 +436,6 @@ function rancher_config_kube_non_root(){
 #\******************************************************************/#
 # | BUILD: functions
 #/------------------------------------------------------------------\#
-    # --- latest dtr build version: v2.6.3 --------------
-    # ---------------------------------------------------
-    # Image pull success: rancher/rancher-agent:v2.5.11
-    # Image pull success: rancher/rancher-operator:v0.1.4
-    # Image pull success: rancher/rancher-runtime:v2.5.11
-    # Image pull success: rancher/rancher-webhook:v0.1.2
-    # Image pull success: rancher/rancher:v2.5.11
-    # Image pull success: rancher/rke-tools:v0.1.74
-    # Image pull success: rancher/rke-tools:v0.1.75
-    # Image pull success: rancher/rke-tools:v0.1.78
-    # ---------------------------------------------------
 
 function rke_dtr_az_server_create(){                          #--- create single server
     source `pwd`/azure_create_vm.sh ${AZ_CLUSTER_GROUP_NAME}  #--- dtrprivate
@@ -585,6 +571,13 @@ function rke2_bin_trees(){
     sudo tree -L 4 -A /usr/local/bin
 }
 
+function rke2_images_txt(){
+    for x in `sudo find /var/lib/rancher/rke2/ -name "*image.txt"`
+     do
+         __MSG_BANNER__ "$x"
+         sudo cat ${x}
+     done
+}
 
 function rke_etc_hosts_az_update(){
   tempFile=/tmp/etc_hosts
@@ -616,10 +609,28 @@ function sshnode(){
   ssh  -i ${vmIfile} ${vmAuth} "${2}"
 }
 
-function rk2_update_images(){
+function rke2-env(){
+    CLS_MASTER_TOKEN=`pwd`/rke_upstream_cls_token.tkn
+    CLS_MASTER_PASSW=`pwd`/rke_upstream_cls_admin.auth
+
+    RKE2_REGISTRY_YAML=/etc/rancher/rke2/registries.yaml
+    RKE2_CLUSTER_YAML=/etc/rancher/rke2/config.yaml
+    RKE2_CONFIG_TEMP=/home/azureuser/uga/rke2_config.yaml
+    RKE2_TAR_FILE=`pwd`/tar/rancherd-amd64.tar.gz
+    RKE2_NODE_TOKEN=/var/lib/rancher/rke2/server/node-token
+    RKE2_SERVICE_AGENT=/usr/local/lib/systemd/system/rancherd-agent.service
+    RKE2_SERVICE_SERVER=/usr/local/lib/systemd/system/rancherd-server.service
+    RKE2_TMP_TARBALL=/tmp/rancherd-amd64.tar.gz
+    RKE2_REGISTRY_AUTH_URL='vm-rg-dtrprivateprod-1-106.westus2.cloudapp.azure.com'
+    RKE2_REGISTRY_AUTH_USER='dtradmin'
+    RKE2_REGISTRY_AUTH_PASS='lLmxF6LmrGFcj6G'
     RKE2_ROOT_DIR=/var/lib/rancher/rke2
     RKE2_AGENT_DIR=${RKE2_ROOT_DIR}/agent
     RKE2_IMAGE_DIR=${RKE2_AGENT_DIR}/images
+    set | egrep 'CLS_|RKE2_|REGISTRY_|DTR_|INSTALL_R' | grep '=' | egrep -v '\(\)|;|\$' | grep -v curl
+}
+
+function rk2_update_images(){
     for x in `sudo ls -1 ${RKE2_IMAGE_DIR}`
      do
        __MSG_INFO__ "Updating: ${RKE2_IMAGE_DIR}/${x}"
@@ -703,8 +714,6 @@ function docker_test_repo(){
       #----------------------------------------------------------------------------------------------------------------
 
     # Releases : ---> https://github.com/rancher/rancher/releases?q=2.5.11&expanded=true
-
-  
 
 
 
