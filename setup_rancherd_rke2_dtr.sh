@@ -62,11 +62,10 @@ function rke2-env(){
     RKE2_SERVICE_AGENT=/usr/local/lib/systemd/system/rancherd-agent.service
     RKE2_SERVICE_SERVER=/usr/local/lib/systemd/system/rancherd-server.service
     RKE2_TMP_TARBALL=/tmp/rancherd-amd64.tar.gz
-    RKE2_REGISTRY_AUTH_URL='vm-rg-dtrprivateprod-1-106.westus2.cloudapp.azure.com'
     RKE2_ROOT_DIR=/var/lib/rancher/rke2
     RKE2_AGENT_DIR=${RKE2_ROOT_DIR}/agent
     RKE2_IMAGE_DIR=${RKE2_AGENT_DIR}/images
-    set | egrep 'CLS_|RKE2_|DTR_' | grep '=' | egrep -v '\(\)|;|\$' | grep -v curl
+    set | egrep 'CLS_|RKE2_||DTR_' | grep '=' | egrep -v '\(\)|;|\$' | grep -v curl
 }
 
 
@@ -115,14 +114,14 @@ function az_create_vm(){
       __MSG_INFO__ "Creating: ${vmName}"
 
       az vm create --resource-group rg-clsrke2-1 \
-      --name vm-rg-clsrke2-1-${1} \
-      --availability-set avset-rg-clsrke2-1 \
-      --image UbuntuLTS \
-      --admin-username azureuser \
-      --no-wait \
-      --accelerated-networking true \
-      --nsg vm-rg-clsrke2-1-${1}-nsg \
-      --ssh-key-name sshkey-rg-clsrke2-1-vm-${1}
+                  --name vm-rg-clsrke2-1-${1} \
+                  --availability-set avset-rg-clsrke2-1 \
+                  --image UbuntuLTS \
+                  --admin-username azureuser \
+                  --no-wait \
+                  --accelerated-networking true \
+                  --nsg vm-rg-clsrke2-1-${1}-nsg \
+                  --ssh-key-name sshkey-rg-clsrke2-1-vm-${1}
 }
 
 function az_delete_vm(){
@@ -404,11 +403,12 @@ function r2dtrSetPassword(){
 # | MAIN: rancher_cluster_setup
 #/------------------------------------------------------------------\#
 
-AZ_CLUSTER_GROUP_NAME=clsrke2
-export DTR_TYPE=${1}                 #--- private|public
-export RKE2_INSTALL_RANCHERD_VERSION=${2} #--- 2.6.3 | v2.5.4-rc6
-export RKE2_REGISTRY_AUTH_USER=${3}  #--- 'qgenqzva'
-export RKE2_REGISTRY_AUTH_PASS=${4}  #--- 'yYzkS1YzeTSpw1T'
+        export AZ_CLUSTER_GROUP_NAME=clsrke2
+        export DTR_TYPE=${1}                 #--- private|public
+        export RKE2_INSTALL_RANCHERD_VERSION=${2} #--- 2.6.3 | v2.5.4-rc6
+        export RKE2_REGISTRY_AUTH_URL=${3}   #---- 'vm-rg-dtrprivateprod-1-106.westus2.cloudapp.azure.com'
+        export RKE2_REGISTRY_AUTH_USER=${4}  #--- 'qgenqzva'
+        export RKE2_REGISTRY_AUTH_PASS=${5}  #--- 'yYzkS1YzeTSpw1T'
 
 cat<<EOF
 AZ_CLUSTER_GROUP_NAME=${AZ_CLUSTER_GROUP_NAME}
@@ -419,7 +419,6 @@ RKE2_REGISTRY_AUTH_PASS=${RKE2_REGISTRY_AUTH_PASS}
 EOF
 
 az-env load_script
-
 rke2-env
 
 function rancher_server_install(){
@@ -432,8 +431,8 @@ function rancher_server_install(){
 		  #----------------------------#
     	rancher_config_remote_rke2_scripts ${RKE2_INSTALL_RANCHERD_VERSION}
     	rancher_config_install_rke2 ${DTR_TYPE}
-      rancher_config_udpate_rancherd_service ${DTR_TYPE}
-      rancher_config_start_rancherd_service
+        rancher_config_udpate_rancherd_service ${DTR_TYPE}
+        rancher_config_start_rancherd_service
     	rancher_config_get_server_token
 }
 
@@ -448,8 +447,8 @@ function rancher_server_client(){
 		  #----------------------------#
     	rancher_config_remote_rke2_scripts ${RKE2_INSTALL_RANCHERD_VERSION}
     	rancher_config_install_rke2 ${DTR_TYPE}
-      rancher_config_udpate_rancherd_service ${DTR_TYPE}
-      rancher_config_start_rancherd_service
+        rancher_config_udpate_rancherd_service ${DTR_TYPE}
+        rancher_config_start_rancherd_service
     	rancher_config_get_server_token
 }
 
@@ -551,6 +550,9 @@ function rke_node_rebuild_debug(){
 
 #/**************************************************************************************#/
 
+rke2_agent_join_cluster(){
+    rke2 agent -s https://10.0.0.4:9345 -t ${NODE_TOKEN}
+}
 
 rke2_update_containerd_config_toml(){
 cat <<EOF| sudo tee ${RKE2_AGENT_DIR}/etc/containerd/config.toml
@@ -597,9 +599,13 @@ klog(){
 }
 
 ctrdlog(){
-  CONTAINERD_LOG=/var/lib/rancher/rke2/agent/containerd/containerd.log
-  __MSG_BANNER__ "head ${1} ${CONTAINERD_LOG}"
-  sudo head -${1} ${CONTAINERD_LOG}
+    CONTAINERD_LOG=/var/lib/rancher/rke2/agent/containerd/containerd.log
+    __MSG_BANNER__ "head ${1} ${CONTAINERD_LOG}"
+    option=${1}
+    mode=`echo ${option}|awk '{print substr($1,1,1)}'`
+    lines=`echo ${option}|sed -e "s/${mode}//g"`
+    [ `echo ${option}|grep -c h` -eq 1 ] && sudo head -${lines} ${CONTAINERD_LOG}
+    [ `echo ${option}|grep -c t` -eq 1 ] && sudo tail -${lines} ${CONTAINERD_LOG}
 }
 
 kconfig(){
@@ -696,9 +702,11 @@ function rke2_update_containerd_toml(){
     RKE2_ROOT_DIR=/var/lib/rancher/rke2
     RKE2_AGENT_DIR=${RKE2_ROOT_DIR}/agent
     TOML_FILE=${RKE2_AGENT_DIR}/etc/containerd/config.toml
-    DTR_DOMAIN="vm-rg-dtrprivateprod-1-106.westus2.cloudapp.azure.com:443"
+    DTR_DOMAIN="${RKE2_REGISTRY_AUTH_URL}:443"
     __MSG_INFO__ "UpdatinG: ${TOML_FILE}"
-sudo cp ${TOML} ${TOML_FILE}.ORIGINAL
+
+    sudo cp ${TOML_FILE} ${TOML_FILE}.ORIGINAL
+    sudo chattr -i ${TOML_FILE} 
 cat <<EOF|sudo tee ${TOML_FILE}
 [plugins.opt]
   path = "${RKE2_AGENT_DIR}/containerd"
@@ -719,8 +727,42 @@ cat <<EOF|sudo tee ${TOML_FILE}
   username = "dtradmin"
   password = "lLmxF6LmrGFcj6G"
 EOF
+sudo chattr +i ${TOML_FILE} 
+
 }
 
+
+az_add_128gib_disk_to_dtr_server(){
+        # rg-${AZ_CLUSTER_GROUP_NAME}-1
+
+        AZ_CLUSTER_GROUP_NAME=dtrprivateprod
+        AZ_IP_POOL_BACKEND=ip-pool-rg-dtrprivateprod-1-backend
+        AZ_IP_POOL_FRONTEND=ip-pool-rg-dtrprivateprod-1-frontend
+        AZ_LOADBALANCER=lb-rg-dtrprivateprod-1
+        AZ_LOADBALANCER_PROBE=rg-dtrprivateprod-1-probe-health
+        AZ_LOADBALANCER_RULE=rg-dtrprivateprod-1-rule
+        AZ_NET_SVC_GROUP=nsg-rg-dtrprivateprod-1
+        AZ_NET_SVC_GROUP_RULE=nsg-rg-dtrprivateprod-1-rule
+        AZ_PUBLIC_IP=ip-pub-rg-dtrprivateprod-1-lb
+        AZ_PUBLIC_IP_VM_NAME=ip-pub-rg-dtrprivateprod-1-vm
+        AZ_PUBLIC_IP_vmName=ip-pub-rg-clsrke2-1-vm
+        AZ_RESOURCE_GROUP_NAME=rg-dtrprivateprod-1
+        AZ_RESOURCE_LOCATION=westus2
+        AZ_VM_AVAIL_SET=avset-rg-dtrprivateprod-1
+        AZ_VM_NAME_ROOT=vm-rg-dtrprivateprod-1
+        AZ_VM_NET_PRIMARY=vnet-rg-dtrprivateprod-1
+        AZ_VM_NET_PRIMARY_NIC=rg-dtrprivateprod-1-nic
+        AZ_VM_NET_SUBNET=rg-dtrprivateprod-1-subnet
+        AZ_vmName_ROOT=vm-rg-clsrke2-1
+        azenv
+        # az_disk_attach 2 128 "${AZ_VM_NAME_ROOT}-1"
+        az vm disk attach -g rg-dtrprivateprod-1 \
+                        --vm-name vm-rg-dtrprivateprod-1-106 \
+                        --name disk-rg-dtrprivateprod-1-106-128gib \
+                        --new \
+                        --size-gb 128 \
+                        --sku StandardSSD_LRS
+}
 
 #\******************************************************************/#
 
