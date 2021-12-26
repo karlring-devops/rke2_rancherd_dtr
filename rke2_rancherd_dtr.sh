@@ -425,12 +425,12 @@ function r2dtrSetPassword(){
 #
 #-- fresh node builds------<#
 #
-#    . `pwd`/setup_rancherd_rke2_dtr.sh clsrke2 private 2.5.11 "vm-rg-rke2private-1-1.westus2.cloudapp.azure.com" qgenqzva yYzkS1YzeTSpw1T
+#    . `pwd`/rke2_rancherd_dtr.sh clsrke2 private 2.5.11 "vm-rg-rke2private-1-1.westus2.cloudapp.azure.com" qgenqzva yYzkS1YzeTSpw1T
 #    rancher_cluster_setup
 #
 #>----- node rebuilds ---------<#
 #
-#    . `pwd`/setup_rancherd_rke2_dtr.sh clsrke2 private 2.5.11 "vm-rg-rke2private-1-1.westus2.cloudapp.azure.com" qgenqzva yYzkS1YzeTSpw1T
+#    . `pwd`/rke2_rancherd_dtr.sh clsrke2 private 2.5.11 "vm-rg-rke2private-1-1.westus2.cloudapp.azure.com" qgenqzva yYzkS1YzeTSpw1T
 #    rke_rebuild_nodes
 #
 #/------------------------------------------------------------------\#
@@ -836,9 +836,4 @@ function docker_test_repo(){
 
     # Releases : ---> https://github.com/rancher/rancher/releases?q=2.5.11&expanded=true
 
-  
-
-
-
-
-
+ 
