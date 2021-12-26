@@ -1,10 +1,34 @@
 #!/bin/bash
 # /***********************************************************************************************
-# --- HA setup ------#
+#                       _               ____  
+#  _ __ __ _ _ __   ___| |__   ___ _ __|  _ \ 
+# | '__/ _` | '_ \ / __| '_ \ / _ \ '__| | | |
+# | | | (_| | | | | (__| | | |  __/ |  | |_| |
+# |_|  \__,_|_| |_|\___|_| |_|\___|_|  |____/ 
+#
+#  _                         _               
+# | |__   __ _      ___  ___| |_ _   _ _ __  
+# | '_ \ / _` |    / __|/ _ \ __| | | | '_ \ 
+# | | | | (_| |    \__ \  __/ |_| |_| | |_) |
+# |_| |_|\__,_|    |___/\___|\__|\__,_| .__/ 
+#                                     |_|   
+#   ___  _ __        _ __  _ __ ___ _ __ ___  
+#  / _ \| '_ \ _____| '_ \| '__/ _ \ '_ ` _ \ 
+# | (_) | | | |_____| |_) | | |  __/ | | | | |
+#  \___/|_| |_|     | .__/|_|  \___|_| |_| |_|
+#                   |_|      
+# /***********************************************************************************************
+# / USEFULE DOCS
 # /***********************************************************************************************
 #-> https://rancher.com/docs/rancher/v2.5/en/installation/other-installation-methods/install-rancher-on-linux/
 #-> https://susergs.com/installing-rke-government-in-airgap-environments/
-#->
+#-> https://docs.rke2.io/install/quickstart/#2-enable-the-rke2-server-service
+#-> https://github.com/kubernetes/kubernetes/issues/70334
+#-> https://github.com/kubernetes/kubeadm/issues/1849
+#-> https://stackoverflow.com/questions/56737867/the-connection-to-the-server-x-x-x-6443-was-refused-did-you-specify-the-right
+#-> https://www.ibm.com/docs/en/noi/1.6.0?topic=logs-viewing-kubernetes
+#-> https://github.com/rancher/rke2/issues/638
+#-> https://github.com/rancher/rancher/releases?q=2.5.11&expanded=true
 # /***********************************************************************************************
 
 # alias r2dtr=". `pwd`/setup_rancherd_rke2_dtr.sh ${1} ${2}"
@@ -823,17 +847,3 @@ function docker_test_repo(){
 }
 
 #\******************************************************************/#
-
-
-      # #--->https://docs.rke2.io/install/quickstart/#2-enable-the-rke2-server-service
-      # #---> https://github.com/kubernetes/kubernetes/issues/70334
-      # #---> https://github.com/kubernetes/kubeadm/issues/1849
-      # #---> https://stackoverflow.com/questions/56737867/the-connection-to-the-server-x-x-x-6443-was-refused-did-you-specify-the-right
-      # #---> https://www.ibm.com/docs/en/noi/1.6.0?topic=logs-viewing-kubernetes
-      # #---> https://github.com/rancher/rke2/issues/638
-
-      #----------------------------------------------------------------------------------------------------------------
-
-    # Releases : ---> https://github.com/rancher/rancher/releases?q=2.5.11&expanded=true
-
- 
