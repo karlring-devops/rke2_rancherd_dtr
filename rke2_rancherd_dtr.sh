@@ -39,10 +39,10 @@
 # | general functions
 #/------------------------------------------------------------------\#
 function __MSG_HEADLINE__(){
-    echo "[INFO]  ===== ${1} "
+    echo "# [INFO]  ===== ${1} "
 }
 function __MSG_LINE__(){
-    echo "-------------------------------------------------"
+    echo "# -------------------------------------------------"
 }
 function __MSG_BANNER__(){
     __MSG_LINE__
@@ -51,11 +51,12 @@ function __MSG_BANNER__(){
 
 }
 function __MSG_INFO__(){
-     echo "[INFO]  ${1}: ${2}"
+     echo "# [INFO]  ${1}: ${2}"
 }
 
 function az-env(){
     __MSG_BANNER__ "${1}"
+    export RKE2_DTR_STR=`date '+%Y%m%d%H%s'`
     AZ_RESOURCE_GROUP_NAME="rg-${AZ_CLUSTER_GROUP_NAME}-1"
     AZ_RESOURCE_LOCATION="westus2"
     AZ_PUBLIC_IP="ip-pub-${AZ_RESOURCE_GROUP_NAME}-lb"
@@ -70,7 +71,7 @@ function az-env(){
     AZ_NET_SVC_GROUP="nsg-${AZ_RESOURCE_GROUP_NAME}"
     AZ_NET_SVC_GROUP_RULE="nsg-${AZ_RESOURCE_GROUP_NAME}-rule"
     AZ_VM_AVAIL_SET="avset-${AZ_RESOURCE_GROUP_NAME}"
-    AZ_vmName_ROOT="vm-${AZ_RESOURCE_GROUP_NAME}"
+    AZ_VM_NAME_ROOT="vm-${AZ_RESOURCE_GROUP_NAME}"
     AZ_VM_NET_PRIMARY_NIC="${AZ_RESOURCE_GROUP_NAME}-nic"
     # getenv 'AZ_'
     set | grep AZ_ | grep '=' | egrep -v '\(\)|;|\$'
@@ -78,6 +79,7 @@ function az-env(){
 
 function rke2-env(){
     __MSG_BANNER__ "RKE2 Variables"
+    export RKE2_DTR_STR=`date '+%Y%m%d%H%s'`
     CLS_MASTER_TOKEN=`pwd`/rke_upstream_cls_token.tkn
     CLS_MASTER_PASSW=`pwd`/rke_upstream_cls_admin.auth
 
@@ -123,6 +125,25 @@ function flist(){
      grep '(){' `pwd`/setup_rancherd_rke2_dtr.sh|egrep 'MSG|az|rke2|ssh|rancher'|sed -e 's/(){//g'| grep function| grep -v grep
  }
 
+
+function docker_install(){
+        sudo apt-get remove docker.io containerd runc
+        sudo apt-get update
+        sudo apt-get install \
+            ca-certificates \
+            curl \
+            gnupg \
+            lsb-release -y
+
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        sudo apt-get update
+        sudo apt-get install docker-ce docker-ce-cli containerd.io -y
+}
+
 #\******************************************************************/#
 # | AZURE functions
 #/------------------------------------------------------------------\#
@@ -166,7 +187,7 @@ function az_delete_vm(){
 # | RANCHER functions
 #/------------------------------------------------------------------\#
 
-function rancher_config_remote_env(){
+function rke2_config_remote_env(){
     az-env rancher_config_remote_env
   rke2-env
 
@@ -197,7 +218,7 @@ function rancher_config_remote_env(){
             export REGEX='listener.cattle.io/fingerprint:SHA1'
 }
 
-function rancher_config_remote_etc_hosts(){
+function rke2_config_remote_etc_hosts(){
   az-env rancher_config_remote_etc_hosts
   rke2-env
 
@@ -217,7 +238,7 @@ EOFETCHOSTS
 EOF
 }
 
-function rancher_config_remote_paths(){
+function rke2_config_remote_paths(){
   az-env rancher_config_remote_paths
   rke2-env
 
@@ -235,7 +256,7 @@ sudo chown -R azureuser:azureuser /home/azureuser/uga
 EOF
 }
 
-function rancher_config_remote_rke2_config_yaml(){
+function rke2_config_remote_rke2_config_yaml(){
   az-env rancher_config_remote_rke2_config_yaml
   rke2-env
 
@@ -256,32 +277,51 @@ EOFRKECONFIG
 EOF
 }
 
-function rancher_config_remote_registry_yaml(){
+function rke2_config_remote_registry_yaml(){
   az-env rancher_config_remote_registry_yaml
   rke2-env
+        # ssh -q -T -i ${vmIfile} ${vmAuth} <<EOF
+        #       sudo touch ${RKE2_REGISTRY_YAML}
+        #       cat <<EOFYAML | sudo tee ${RKE2_REGISTRY_YAML}
+        # mirrors:
+        #   docker.io:
+        #     endpoint:
+        #       - "https://${RKE2_REGISTRY_AUTH_URL}:443"
+        # configs:
+        #   "${RKE2_REGISTRY_AUTH_URL}:443":
+        #     auth:
+        #       username: ${RKE2_REGISTRY_AUTH_USER}
+        #       password: ${RKE2_REGISTRY_AUTH_PASS}
+        #     # tls:
+        #     #   cert_file: # path to the cert file used in the registry
+        #     #   key_file:  # path to the key file used in the registry
+        #     #   ca_file:   # path to the ca file used in the registry
+        # EOFYAML
+        #       echo "[INFO]  Created: ${RKE2_REGISTRY_YAML}"
+        #       cat ${RKE2_REGISTRY_YAML}
+        # EOF
 ssh -q -T -i ${vmIfile} ${vmAuth} <<EOF
-      sudo touch ${RKE2_REGISTRY_YAML}
-      cat <<EOFYAML | sudo tee ${RKE2_REGISTRY_YAML}
+[ -f ${RKE2_REGISTRY_YAML} ] && sudo cp ${RKE2_REGISTRY_YAML} ${RKE2_REGISTRY_YAML}.${RKE2_DTR_STR}
+sudo touch ${RKE2_REGISTRY_YAML}
+cat <<EOFREGYAML | sudo tee ${RKE2_REGISTRY_YAML} 
 mirrors:
   docker.io:
     endpoint:
-      - "https://${RKE2_REGISTRY_AUTH_URL}:443"
+      - "https://vm-rg-rke2private-1-1.westus2.cloudapp.azure.com:443"
 configs:
-  "${RKE2_REGISTRY_AUTH_URL}:443":
+  "vm-rg-rke2private-1-1.westus2.cloudapp.azure.com:443":
     auth:
-      username: ${RKE2_REGISTRY_AUTH_USER}
-      password: ${RKE2_REGISTRY_AUTH_PASS}
+      username: ************
+      password: ************
     # tls:
     #   cert_file: # path to the cert file used in the registry
     #   key_file:  # path to the key file used in the registry
     #   ca_file:   # path to the ca file used in the registry
-EOFYAML
-      echo "[INFO]  Created: ${RKE2_REGISTRY_YAML}"
-      cat ${RKE2_REGISTRY_YAML}
+EOFREGYAML
 EOF
 }
 
-function rancher_config_remote_rke2_scripts(){
+function rke2_config_remote_rke2_scripts(){
   az-env rancher_config_remote_rke2_scripts
   rke2-env
   version=${1}
@@ -303,7 +343,7 @@ EOFRKESTART
 EOF
 }
 
-function rancher_config_install_rke2(){
+function rke2_config_install_rke2(){
   az-env rancher_config_install_rke2
   rke2-env
   repoType=${1}
@@ -319,7 +359,7 @@ ssh -q -T -i ${vmIfile} ${vmAuth} << EOF
 EOF
 }
 
-function rancher_config_udpate_rancherd_service(){
+function rke2_config_udpate_rancherd_service(){
   az-env rancher_config_udpate_rancherd_service
   rke2-env
   repoType=${1}
@@ -363,7 +403,7 @@ EOF
 fi
 }
 
-function rancher_config_start_rancherd_service(){
+function rke2_config_start_rancherd_service(){
   az-env rancher_config_start_rancherd_service
   rke2-env
   __MSG_BANNER__ "Executing: /home/azureuser/uga/rke2_start_service.sh"
@@ -376,7 +416,7 @@ EOF
     #--- PREPARE OBJS FOR NODE INSTALLS ---------#
     #--------------------------------------------#
 
-function rancher_config_get_server_token(){
+function rke2_config_get_server_token(){
 
     if [ ${vmType} == 'server' ] ; then
         ssh -q -T -i ${vmIfile} ${vmAuth} "${get_server_token}" | tee ${CLS_MASTER_TOKEN}
@@ -385,7 +425,7 @@ function rancher_config_get_server_token(){
     fi
 }
 
-function rancher_config_get_server_login(){
+function rke2_config_get_server_login(){
     rancher_config_remote_env ${1} server
     __MSG_BANNER__ "Cluster UI Login Details"
     if [ ${vmType} == 'server' ] ; then
@@ -400,7 +440,7 @@ EOF
     fi
 }
 
-function rancher_config_kube_non_root(){
+function rke2_config_kube_non_root(){
     export KUBECONFIG=/etc/rancher/rke2/rke2.yaml PATH=$PATH:/var/lib/rancher/rke2/bin
     mkdir -p ~/.kube
     cd ~/.kube
@@ -412,6 +452,23 @@ function rancher_config_kube_non_root(){
 function rke_node_journal(){
   sshnode ${1} "journalctl -eu rancherd-server -f"
 }
+
+#\******************************************************************/#
+# | DOCKER: functions
+#/------------------------------------------------------------------\#
+
+function docker_login_repo(){
+            sudo docker login -u${RKE2_REGISTRY_AUTH_USER} -p${RKE2_REGISTRY_AUTH_PASS} ${RKE2_REGISTRY_AUTH_URL}:443
+}
+
+function docker_test_repo(){
+            DOCKER_HOST="${RKE2_REGISTRY_AUTH_URL}:443"
+            sudo docker pull alpine
+            sudo docker tag alpine ${DOCKER_HOST}/my-alpine
+            sudo docker push ${DOCKER_HOST}/my-alpine
+}
+#\******************************************************************/#
+
 
 function r2dtrenv(){
     dtrType="${1}"
@@ -476,15 +533,16 @@ cat<<EOF
 AZ_CLUSTER_GROUP_NAME=${AZ_CLUSTER_GROUP_NAME}
 DTR_TYPE=${DTR_TYPE}
 RKE2_INSTALL_RANCHERD_VERSION=${RKE2_INSTALL_RANCHERD_VERSION}
-RKE2_REGISTRY_AUTH_USER=${RKE2_REGISTRY_AUTH_URL}
+RKE2_REGISTRY_AUTH_URL=${RKE2_REGISTRY_AUTH_URL}
 RKE2_REGISTRY_AUTH_USER=${RKE2_REGISTRY_AUTH_USER}
 RKE2_REGISTRY_AUTH_PASS=*************
+RKE2_DTR_STR=${RKE2_DTR_STR}
 EOF
 
 az-env "azure Variables"
 rke2-env
 
-function rancher_server_install(){
+function rke2_server_install(){
     	rancher_config_remote_env ${1} server
     	rancher_config_remote_etc_hosts
     	rancher_config_remote_paths
@@ -500,7 +558,7 @@ function rancher_server_install(){
 }
 
 
-function rancher_server_client(){
+function rke2_server_client(){
     	rancher_config_remote_env ${1} worker `cat ${CLS_MASTER_TOKEN}`
     	rancher_config_remote_etc_hosts
     	rancher_config_remote_paths
@@ -515,7 +573,7 @@ function rancher_server_client(){
     	rancher_config_get_server_token
 }
 
-function rancher_cluster_setup(){
+function rke2_cluster_setup(){
       az-env rancher_cluster_setup
       rke2-env
       rancher_server_install 1
@@ -541,6 +599,7 @@ function rke_rebuild_nodes(){             #--- build rke azure cluster
       __MSG_INFO__ end_date "`date`"
       rke_node_journal 1
 }
+
 
 #\******************************************************************/#
 # | MAIN: functions
@@ -795,8 +854,8 @@ cat <<EOF|sudo tee ${TOML_FILE}
 [plugins.cri.registry.mirrors."docker.io"]
   endpoint = ["https://${DTR_DOMAIN}"]
 [plugins.cri.registry.configs."${DTR_DOMAIN}".auth]
-  username = "dtradmin"
-  password = "lLmxF6LmrGFcj6G"
+  username = "************"
+  password = "************"
 EOF
 sudo chattr +i ${TOML_FILE} 
 
@@ -824,7 +883,7 @@ az_add_128gib_disk_to_dtr_server(){
         AZ_VM_NET_PRIMARY=vnet-rg-dtrprivateprod-1
         AZ_VM_NET_PRIMARY_NIC=rg-dtrprivateprod-1-nic
         AZ_VM_NET_SUBNET=rg-dtrprivateprod-1-subnet
-        AZ_vmName_ROOT=vm-rg-clsrke2-1
+        AZ_VM_NAME_ROOT=vm-rg-clsrke2-1
         azenv
         # az_disk_attach 2 128 "${AZ_VM_NAME_ROOT}-1"
         az vm disk attach -g rg-dtrprivateprod-1 \
@@ -838,19 +897,32 @@ az_add_128gib_disk_to_dtr_server(){
 #\******************************************************************/#
 
 
-function docker_login_repo(){
-            MY_VM_HOST=vm-rg-dtrprivateprod-1-106
-            #MY_REGISTRY_DOMIN_COM=${MY_VM_HOST}.westus2.cloudapp.azure.com  
-            docker login -u${RKE2_REGISTRY_AUTH_USER} -p${RKE2_REGISTRY_AUTH_PASS} ${RKE2_REGISTRY_AUTH_URL}:443
-}
-
-function docker_test_repo(){
-            MY_VM_HOST=vm-rg-dtrprivateprod-1-106
-            #MY_REGISTRY_DOMIN_COM=${MY_VM_HOST}.westus2.cloudapp.azure.com  
-            DOCKER_HOST="${RKE2_REGISTRY_AUTH_URL}:443"
-            sudo docker pull alpine
-            sudo docker tag alpine ${DOCKER_HOST}/my-alpine
-            sudo docker push ${DOCKER_HOST}/my-alpine
-}
 
 #\******************************************************************/#
+
+
+rke2_registry_retool_restart(){
+cat <<EOF | sudo tee /etc/rancher/rke2/registries.yaml 
+mirrors:
+  docker.io:
+    endpoint:
+      - "https://vm-rg-rke2private-1-1.westus2.cloudapp.azure.com:443"
+configs:
+  "vm-rg-rke2private-1-1.westus2.cloudapp.azure.com:443":
+    auth:
+      username: ************
+      password: ************
+    # tls:
+    #   cert_file: # path to the cert file used in the registry
+    #   key_file:  # path to the key file used in the registry
+    #   ca_file:   # path to the ca file used in the registry
+EOF
+
+sudo systemctl stop rancherd-server.service
+sudo systemctl disable rancherd-server.service
+sudo systemctl enable rancherd-server.service
+sudo systemctl start rancherd-server.service
+sudo systemctl status rancherd-server.service --no-pager
+journalctl -eu rancherd-server -f
+}
+
