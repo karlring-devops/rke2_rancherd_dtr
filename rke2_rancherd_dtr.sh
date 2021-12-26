@@ -12,11 +12,13 @@
 # | | | | (_| |    \__ \  __/ |_| |_| | |_) |
 # |_| |_|\__,_|    |___/\___|\__|\__,_| .__/ 
 #                                     |_|   
-#   ___  _ __        _ __  _ __ ___ _ __ ___  
-#  / _ \| '_ \ _____| '_ \| '__/ _ \ '_ ` _ \ 
-# | (_) | | | |_____| |_) | | |  __/ | | | | |
-#  \___/|_| |_|     | .__/|_|  \___|_| |_| |_|
-#                   |_|      
+#                                                __                      __  
+#   ___  _ __        _ __  _ __ ___ _ __ ___    / /__ _ _____   _ _ __ __\ \ 
+#  / _ \| '_ \ _____| '_ \| '__/ _ \ '_ ` _ \  | |/ _` |_  / | | | '__/ _ \ |
+# | (_) | | | |_____| |_) | | |  __/ | | | | | | | (_| |/ /| |_| | | |  __/ |
+#  \___/|_| |_|     | .__/|_|  \___|_| |_| |_| | |\__,_/___|\__,_|_|  \___| |
+#                   |_|                         \_\                      /_/
+# 
 # /***********************************************************************************************
 # / USEFULE DOCS
 # /***********************************************************************************************
@@ -75,6 +77,7 @@ function az-env(){
 }
 
 function rke2-env(){
+    __MSG_BANNER__ "RKE2 Variables"
     CLS_MASTER_TOKEN=`pwd`/rke_upstream_cls_token.tkn
     CLS_MASTER_PASSW=`pwd`/rke_upstream_cls_admin.auth
 
@@ -89,7 +92,7 @@ function rke2-env(){
     RKE2_ROOT_DIR=/var/lib/rancher/rke2
     RKE2_AGENT_DIR=${RKE2_ROOT_DIR}/agent
     RKE2_IMAGE_DIR=${RKE2_AGENT_DIR}/images
-    set | egrep 'CLS_|RKE2_||DTR_' | grep '=' | egrep -v '\(\)|;|\$' | grep -v curl
+    set | egrep 'RKE2_|CLS_' | grep '=' | egrep -v '\(\)|;|\$'
 }
 
 
@@ -135,6 +138,7 @@ function az_create_vm(){
       az-env az_create_vm
       rke2-env
       vmName="vm-rg-clsrke2-1-${1}"
+      __MSG_LINE__
       __MSG_INFO__ "Creating: ${vmName}"
 
       az vm create --resource-group rg-clsrke2-1 \
@@ -151,6 +155,7 @@ function az_create_vm(){
 function az_delete_vm(){
       az-env az_delete_vm
       rke2-env
+      __MSG_LINE__
       vmName=`cat /etc/hosts|grep "${AZ_CLUSTER_GROUP_NAME}-1-${1}"|awk '{print $2}'`
       __MSG_INFO__ "Deleting: ${vmName}"
       az vm delete -g ${AZ_RESOURCE_GROUP_NAME} -n ${vmName} --yes
@@ -466,15 +471,17 @@ function r2dtrSetPassword(){
         export RKE2_REGISTRY_AUTH_USER=${5}  #--- 'qgenqzva'
         export RKE2_REGISTRY_AUTH_PASS=${6}  #--- 'yYzkS1YzeTSpw1T'
 
+__MSG_BANNER__ "User Variables"
 cat<<EOF
 AZ_CLUSTER_GROUP_NAME=${AZ_CLUSTER_GROUP_NAME}
 DTR_TYPE=${DTR_TYPE}
 RKE2_INSTALL_RANCHERD_VERSION=${RKE2_INSTALL_RANCHERD_VERSION}
+RKE2_REGISTRY_AUTH_USER=${RKE2_REGISTRY_AUTH_URL}
 RKE2_REGISTRY_AUTH_USER=${RKE2_REGISTRY_AUTH_USER}
-RKE2_REGISTRY_AUTH_PASS=${RKE2_REGISTRY_AUTH_PASS}
+RKE2_REGISTRY_AUTH_PASS=*************
 EOF
 
-az-env load_script
+az-env "azure Variables"
 rke2-env
 
 function rancher_server_install(){
